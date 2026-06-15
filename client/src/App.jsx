@@ -200,10 +200,13 @@ function App() {
   const switchRoom = (targetRoom) => {
     if (targetRoom === currentRoom) return;
     
+    // 💡 해결: 이동 전(currentRoom)과 이동 후(targetRoom) 모두를 "읽음" 처리합니다.
     setLastRead((prev) => ({
       ...prev,
-      [targetRoom]: roomMessages[targetRoom]?.length || 0
+      [currentRoom]: roomMessages[currentRoom]?.length || 0, // 방을 떠나기 전 현재 방 읽음 처리
+      [targetRoom]: roomMessages[targetRoom]?.length || 0    // 새로 들어가는 방 즉시 읽음 처리
     }));
+    
     setCurrentRoom(targetRoom);
   };
 
