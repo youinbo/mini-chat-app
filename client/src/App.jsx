@@ -28,16 +28,24 @@ function App() {
   const handleAddNewRoom = () => {
     const nextRoom = newRoomInput.trim();
     if (nextRoom === "" || channelList.includes(nextRoom)) return;
+    
+    // 1. 서버에 새 방 참가 알림
     socket.emit("join_room", nextRoom);
+    
+    // 2. 채널 목록에 추가
     setChannelList((prev) => [...prev, nextRoom]);
+    
+    // 3. 현재 방을 새로 만든 방으로 전환
     setCurrentRoom(nextRoom);
     setNewRoomInput("");
   };
 
   const switchRoom = (targetRoom) => {
     if (targetRoom === currentRoom) return;
+    // 방을 전환할 때 현재까지의 메시지 개수를 읽음으로 처리
     setLastRead((prev) => ({
       ...prev,
+      [currentRoom]: roomMessages[currentRoom]?.length || 0,
       [targetRoom]: roomMessages[targetRoom]?.length || 0
     }));
     setCurrentRoom(targetRoom);
@@ -82,8 +90,6 @@ function App() {
     return () => socket.off("send_message", handleReceiveMessage);
   }, []);
 
-  const currentMessageList = roomMessages[currentRoom] || [];
-
   return (
     <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "800px", margin: "0 auto" }}>
       {!isLoggedIn ? (
@@ -91,43 +97,38 @@ function App() {
           <h2>자유 입장형 멀티 채팅방 🚀</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "300px", margin: "0 auto" }}>
             <input type="text" placeholder="닉네임" style={{ padding: "12px" }} onChange={(e) => setUsername(e.target.value)} />
-            <input type="text" placeholder="입장할 방 이름" style={{ padding: "12px" }} onChange={(e) => setRoomInput(e.target.value)} onKeyPress={(e) => e.key === "Enter" && handleLogin()} />
+            <input type="text" placeholder="입장할 방 이름" style={{ padding: "12px" }} onChange={(e) => setRoomInput(e.target.value)} />
             <button onClick={handleLogin} style={{ padding: "12px", backgroundColor: "#4A90E2", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}>입장하기</button>
           </div>
         </div>
       ) : (
-        <div>
-          <h2>안녕하세요, <span style={{ color: "blue" }}>{username}</span>님!</h2>
-          <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-            <div style={{ width: "220px", borderRight: "1px solid #ccc", paddingRight: "20px" }}>
-              <h3>💬 채널 목록</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {channelList.map((roomName) => {
-                  const unread = (roomMessages[roomName]?.length || 0) - (lastRead[roomName] || 0);
-                  return (
-                    <div key={roomName} onClick={() => switchRoom(roomName)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", border: "1px solid #ddd", cursor: "pointer", backgroundColor: currentRoom === roomName ? "#4A90E2" : "#fff", color: currentRoom === roomName ? "#fff" : "#333" }}>
-                      <span style={{ fontWeight: currentRoom === roomName ? "bold" : "normal" }}># {roomName} {unread > 0 && `(${unread})`}</span>
-                      <button onClick={(e) => handleLeaveRoom(roomName, e)} style={{ background: "none", border: "none", color: currentRoom === roomName ? "#fff" : "#999", cursor: "pointer" }}>✕</button>
-                    </div>
-                  );
-                })}
-              </div>
+        <div style={{ display: "flex", gap: "20px" }}>
+          <div style={{ width: "220px", borderRight: "1px solid #ccc", paddingRight: "20px" }}>
+            <h3>🚪 방 추가</h3>
+            <div style={{ display: "flex", gap: "5px", marginBottom: "20px" }}>
+              <input type="text" placeholder="방 이름" value={newRoomInput} style={{ width: "100px", padding: "8px" }} onChange={(e) => setNewRoomInput(e.target.value)} />
+              <button onClick={handleAddNewRoom} style={{ padding: "8px", cursor: "pointer" }}>추가</button>
             </div>
-            <div style={{ flex: 1 }}>
-              <h3>📌 현재 채널: {currentRoom}</h3>
-              <div style={{ border: "1px solid #ccc", height: "350px", overflowY: "auto", padding: "15px", backgroundColor: "#f9f9f9", borderRadius: "8px" }}>
-                {currentMessageList.map((msg, index) => (
-                  <div key={index} style={{ textAlign: msg.author === username ? "right" : "left", margin: "10px 0" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>{msg.author} ({msg.time})</div>
-                    <span style={{ display: "inline-block", padding: "10px", borderRadius: "10px", backgroundColor: msg.author === username ? "#4A90E2" : "#E5E5EA", color: msg.author === username ? "#fff" : "#000" }}>{msg.message}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                <input type="text" value={message} style={{ flex: 1, padding: "12px" }} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === "Enter" && sendMessage()} />
-                <button onClick={sendMessage} style={{ padding: "0 20px", cursor: "pointer" }}>전송</button>
-              </div>
+            <h3>💬 채널 목록</h3>
+            {channelList.map((roomName) => {
+              const unread = (roomMessages[roomName]?.length || 0) - (lastRead[roomName] || 0);
+              return (
+                <div key={roomName} onClick={() => switchRoom(roomName)} style={{ padding: "10px", margin: "5px 0", cursor: "pointer", backgroundColor: currentRoom === roomName ? "#4A90E2" : "#eee", color: currentRoom === roomName ? "#fff" : "#000", borderRadius: "4px", display: "flex", justifyContent: "space-between" }}>
+                  <span># {roomName} {unread > 0 && currentRoom !== roomName && `(${unread})`}</span>
+                  <button onClick={(e) => handleLeaveRoom(roomName, e)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3>현재 채널: {currentRoom}</h3>
+            <div style={{ height: "300px", overflowY: "auto", border: "1px solid #ccc", padding: "10px" }}>
+              {(roomMessages[currentRoom] || []).map((msg, i) => (
+                <div key={i}><strong>{msg.author}:</strong> {msg.message}</div>
+              ))}
             </div>
+            <input type="text" value={message} style={{ width: "80%", padding: "10px" }} onChange={(e) => setMessage(e.target.value)} />
+            <button onClick={sendMessage}>전송</button>
           </div>
         </div>
       )}
