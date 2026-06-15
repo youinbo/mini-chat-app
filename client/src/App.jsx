@@ -111,14 +111,18 @@ function App() {
   }, []); // 빈 배열 유지 (방 전환 시 리렌더링되어도 리스너는 1개만 유지됨)
 
   // [추가] 채팅 자동 스크롤
+  // useEffect(() => {
+  //   setTimeout(() => {
+  //     if (chatEndRef.current) {
+  //       const parent = chatEndRef.current.parentElement;
+  //       parent.scrollTop = parent.scrollHeight;
+  //     }
+  //   }, 100); // 0.1초 뒤에 실행
+  // }, [roomMessages, currentRoom]);
+
   useEffect(() => {
-    setTimeout(() => {
-      if (chatEndRef.current) {
-        const parent = chatEndRef.current.parentElement;
-        parent.scrollTop = parent.scrollHeight;
-      }
-    }, 100); // 0.1초 뒤에 실행
-  }, [roomMessages, currentRoom]);
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [currentMessageList, currentRoom]);
 
   const currentMessageList = roomMessages[currentRoom] || [];
 
