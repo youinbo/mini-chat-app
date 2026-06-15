@@ -34,7 +34,7 @@ function App() {
       await socket.emit("send_message", messageData);
       
       // 내가 보낸 메시지도 내 화면 목록에 바로 추가
-      setMessageList((list) => [...list, messageData]);
+      //setMessageList((list) => [...list, messageData]); 서버에서 돌려주기 때문에 중복
       setMessage("");
     }
   };
