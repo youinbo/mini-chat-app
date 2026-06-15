@@ -31,7 +31,7 @@ io.on('connection', (socket) => {
     /* 핵심 튜닝: io.emit 대신 io.to(data.room).emit을 씁니다.
       이제 이 메시지는 전체 화면이 아니라, 딱 'data.room' 번호의 방에 들어와 있는 사람들에게만 배달됩니다!
     */
-    io.to(data.room).emit('receive_message', data);
+    io.to(data.room).emit('send_message', data);
   });
 
   socket.on('disconnect', () => {
