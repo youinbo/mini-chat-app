@@ -7,35 +7,35 @@ function App() {
   const [username, setUsername] = useState("");
   const [roomInput, setRoomInput] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
   const [currentRoom, setCurrentRoom] = useState("");
-  const [channelList, setChannelList] = useState([]); // 이름 변경: channelList
+  const [channelList, setChannelList] = useState([]);
   const [newRoomInput, setNewRoomInput] = useState("");
   const [message, setMessage] = useState("");
   const [roomMessages, setRoomMessages] = useState({});
 
+  // 로그인 처리
   const handleLogin = () => {
-    if (username.trim() !== "" && roomInput.trim() !== "") {
-      const targetRoom = roomInput.trim();
+    if (username.trim() && roomInput.trim()) {
       setIsLoggedIn(true);
-      setCurrentRoom(targetRoom);
-      setChannelList([targetRoom]);
-      socket.emit("join_room", targetRoom);
+      setCurrentRoom(roomInput.trim());
+      setChannelList([roomInput.trim()]);
+      socket.emit("join_room", roomInput.trim());
     }
   };
 
+  // 방 추가/이동
   const handleAddNewRoom = () => {
     const nextRoom = newRoomInput.trim();
-    if (nextRoom === "" || channelList.includes(nextRoom)) return;
+    if (!nextRoom || channelList.includes(nextRoom)) return;
 
     socket.emit("leave_room", currentRoom);
     socket.emit("join_room", nextRoom);
-
     setChannelList((prev) => [...prev, nextRoom]);
     setCurrentRoom(nextRoom);
     setNewRoomInput("");
   };
 
+  // 방 전환
   const switchRoom = (targetRoom) => {
     if (targetRoom === currentRoom) return;
     socket.emit("leave_room", currentRoom);
@@ -43,101 +43,90 @@ function App() {
     setCurrentRoom(targetRoom);
   };
 
+  // 방 퇴장
   const handleLeaveRoom = (roomToLeave, e) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     socket.emit("leave_room", roomToLeave);
-
-    const updatedChannels = channelList.filter((room) => room !== roomToLeave);
-    setChannelList(updatedChannels);
-
+    const updated = channelList.filter((r) => r !== roomToLeave);
+    setChannelList(updated);
     setRoomMessages((prev) => {
-      const clone = { ...prev };
-      delete clone[roomToLeave];
-      return clone;
+      const copy = { ...prev };
+      delete copy[roomToLeave];
+      return copy;
     });
-
     if (currentRoom === roomToLeave) {
-      if (updatedChannels.length > 0) {
-        setCurrentRoom(updatedChannels[0]);
-        socket.emit("join_room", updatedChannels[0]);
-      } else {
-        setCurrentRoom("");
-      }
+      setCurrentRoom(updated[0] || "");
+      if (updated[0]) socket.emit("join_room", updated[0]);
     }
   };
 
-  const sendMessage = async () => {
-    if (message.trim() !== "" && currentRoom !== "") {
-      const messageData = {
-        room: currentRoom,
-        author: username,
-        message: message,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      };
-      await socket.emit("send_message", messageData);
-      setMessage("");
-    }
+  // 메시지 전송
+  const sendMessage = () => {
+    if (!message.trim() || !currentRoom) return;
+    const data = {
+      room: currentRoom,
+      author: username,
+      message,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+    //socket.emit("send_message", data);
+    setMessage("");
   };
 
+  // 소켓 수신
   useEffect(() => {
-    const handleReceiveMessage = (data) => {
+    const handleReceive = (data) => {
       setRoomMessages((prev) => ({
         ...prev,
-        [data.room]: [...(prev[data.room] || []), data]
+        [data.room]: [...(prev[data.room] || []), data],
       }));
     };
-    socket.on("send_message", handleReceiveMessage);
-    return () => socket.off("send_message", handleReceiveMessage);
+    socket.on("send_message", handleReceive);
+    return () => socket.off("send_message", handleReceive);
   }, []);
 
   const currentMessageList = roomMessages[currentRoom] || [];
 
   return (
-    <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "800px", margin: "0 auto" }}>
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
       {!isLoggedIn ? (
         <div style={{ textAlign: "center", marginTop: "100px" }}>
-          <h2>자유 입장형 멀티 채팅방 🚀</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "300px", margin: "0 auto" }}>
-            <input type="text" placeholder="닉네임" style={{ padding: "12px" }} onChange={(e) => setUsername(e.target.value)} />
-            <input type="text" placeholder="입장할 방 이름" style={{ padding: "12px" }} onChange={(e) => setRoomInput(e.target.value)} onKeyPress={(e) => e.key === "Enter" && handleLogin()} />
-            <button onClick={handleLogin} style={{ padding: "12px", backgroundColor: "#4A90E2", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}>입장하기</button>
-          </div>
+          <h2>로그인</h2>
+          <input placeholder="닉네임" onChange={(e) => setUsername(e.target.value)} />
+          <input placeholder="방 이름" onChange={(e) => setRoomInput(e.target.value)} />
+          <button onClick={handleLogin}>입장</button>
         </div>
       ) : (
-        <div>
-          <h2>안녕하세요, <span style={{ color: "blue" }}>{username}</span>님!</h2>
-          <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-            <div style={{ width: "220px", borderRight: "1px solid #ccc", paddingRight: "20px" }}>
-              <h3>🚪 새 방 들어가기</h3>
-              <div style={{ display: "flex", gap: "5px", marginBottom: "20px" }}>
-                <input type="text" placeholder="방 이름" value={newRoomInput} style={{ width: "120px", padding: "8px" }} onChange={(e) => setNewRoomInput(e.target.value)} onKeyPress={(e) => e.key === "Enter" && handleAddNewRoom()} />
-                <button onClick={handleAddNewRoom} style={{ padding: "8px", cursor: "pointer" }}>이동</button>
+        <div style={{ display: "flex", gap: "20px" }}>
+          <div style={{ width: "200px" }}>
+            <h3>채널 목록</h3>
+            {channelList.map((room) => (
+              <div 
+                key={room} 
+                onClick={() => switchRoom(room)}
+                style={{ 
+                  padding: "10px", 
+                  backgroundColor: currentRoom === room ? "#ddd" : "#f4f4f4",
+                  cursor: "pointer",
+                  marginBottom: "5px"
+                }}
+              >
+                # {room}
+                <button onClick={(e) => handleLeaveRoom(room, e)}>✕</button>
               </div>
-              <h3>💬 채널 목록</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {channelList.map((roomName) => (
-                  <div key={roomName} onClick={() => switchRoom(roomName)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", border: "1px solid #ddd", cursor: "pointer", backgroundColor: currentRoom === roomName ? "#4A90E2" : "#fff", color: currentRoom === roomName ? "#fff" : "#333" }}>
-                    <span style={{ fontWeight: currentRoom === roomName ? "bold" : "normal" }}># {roomName}</span>
-                    <button onClick={(e) => handleLeaveRoom(roomName, e)} style={{ background: "none", border: "none", color: currentRoom === roomName ? "#fff" : "#999", cursor: "pointer" }}>✕</button>
-                  </div>
-                ))}
-              </div>
+            ))}
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3>{currentRoom}</h3>
+            <div style={{ height: "300px", border: "1px solid #ccc", overflowY: "auto" }}>
+              {currentMessageList.map((m, i) => (
+                <div key={i}>
+                  <b>{m.author}</b>: {m.message}
+                </div>
+              ))}
             </div>
-            <div style={{ flex: 1 }}>
-              <h3>📌 현재 채널: {currentRoom}</h3>
-              <div style={{ border: "1px solid #ccc", height: "350px", overflowY: "auto", padding: "15px", backgroundColor: "#f9f9f9", borderRadius: "8px" }}>
-                {currentMessageList.map((msg, index) => (
-                  <div key={index} style={{ textAlign: msg.author === username ? "right" : "left", margin: "10px 0" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>{msg.author} ({msg.time})</div>
-                    <span style={{ display: "inline-block", padding: "10px", borderRadius: "10px", backgroundColor: msg.author === username ? "#4A90E2" : "#E5E5EA", color: msg.author === username ? "#fff" : "#000" }}>{msg.message}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <input type="text" value={message} style={{ flex: 1, padding: "12px" }} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === "Enter" && sendMessage()} />
-                <button onClick={sendMessage} style={{ padding: "0 20px", cursor: "pointer" }}>전송</button>
-              </div>
-            </div>
+            <input value={message} onChange={(e) => setMessage(e.target.value)} />
+            <button onClick={sendMessage}>전송</button>
           </div>
         </div>
       )}
