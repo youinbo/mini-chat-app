@@ -123,9 +123,16 @@ function App() {
   //   }, 100); // 0.1초 뒤에 실행
   // }, [roomMessages, currentRoom]);
 
+// [강제 스크롤 이동]
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [currentMessageList, currentRoom]);
+    // 1. ref가 연결된 div의 부모(채팅창 전체 영역)를 찾음
+    const chatContainer = chatEndRef.current?.parentElement;
+    
+    if (chatContainer) {
+      // 2. 부모의 스크롤 위치를 scrollHeight(전체 높이)로 강제 설정
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  }, [roomMessages, currentRoom]); // roomMessages가 바뀔 때마다 실행
 
 
 
