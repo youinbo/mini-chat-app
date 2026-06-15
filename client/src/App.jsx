@@ -88,16 +88,35 @@ function App() {
   };
 
   // 6. 서버로부터 실시간 메시지 수신 (데이터 누적)
+                                    //   useEffect(() => {
+                                    //     const handleReceiveMessage = (data) => {
+                                    //       setRoomMessages((prev) => ({
+                                    //         ...prev,
+                                    //         [data.room]: [...(prev[data.room] || []), data]
+                                    //       }));
+                                    //     };
+                                    //     socket.on("send_message", handleReceiveMessage);
+                                    //     return () => socket.off("send_message", handleReceiveMessage);
+                                    //   }, []);
+                                    // // [수정된 useEffect]
   useEffect(() => {
+    // 1. 메시지 수신 함수
     const handleReceiveMessage = (data) => {
       setRoomMessages((prev) => ({
         ...prev,
         [data.room]: [...(prev[data.room] || []), data]
       }));
     };
+
+    // 2. 등록 전 반드시 기존 리스너 제거 (이게 없으면 중복 수신됨)
+    socket.off("send_message"); 
     socket.on("send_message", handleReceiveMessage);
-    return () => socket.off("send_message", handleReceiveMessage);
-  }, []);
+
+    // 3. 컴포넌트 종료 시 리스너 제거
+    return () => {
+      socket.off("send_message", handleReceiveMessage);
+    };
+  }, []); // 빈 배열 유지 (방 전환 시 리렌더링되어도 리스너는 1개만 유지됨)
 
   const currentMessageList = roomMessages[currentRoom] || [];
 
