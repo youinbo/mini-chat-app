@@ -82,7 +82,7 @@ function App() {
         message: message,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      //await socket.emit("send_message", messageData);
+      await socket.emit("send_message", messageData);
       setMessage("");
     }
   };
