@@ -29,7 +29,8 @@ io.on("connection", (socket) => {
     roomHistory[data.room].push(data);
     
     // 2. 메시지 전송
-    io.to(data.room).emit("send_message", data);
+    //io.to(data.room).emit("send_message", data);
+    socket.to(data.room).emit("send_message", data);
   });
 });
 
