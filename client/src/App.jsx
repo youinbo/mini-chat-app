@@ -90,6 +90,9 @@ function App() {
     }
   };
 
+
+  const currentMessageList = roomMessages[currentRoom] || [];
+
   // 6. 서버로부터 실시간 메시지 수신 (데이터 누적)
   useEffect(() => {
     // 1. 메시지 수신 함수
@@ -121,10 +124,10 @@ function App() {
   // }, [roomMessages, currentRoom]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [currentMessageList, currentRoom]);
 
-  const currentMessageList = roomMessages[currentRoom] || [];
+
 
   // --- 화면 렌더링 ---
   return (
