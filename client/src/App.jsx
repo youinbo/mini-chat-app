@@ -112,11 +112,12 @@ function App() {
 
   // [추가] 채팅 자동 스크롤
   useEffect(() => {
-    if (chatEndRef.current) {
-      // 채팅 박스의 부모 div를 찾아서 그 높이만큼 스크롤을 맨 아래로 보냄
-      const parent = chatEndRef.current.parentElement;
-      parent.scrollTop = parent.scrollHeight;
-    }
+    setTimeout(() => {
+      if (chatEndRef.current) {
+        const parent = chatEndRef.current.parentElement;
+        parent.scrollTop = parent.scrollHeight;
+      }
+    }, 100); // 0.1초 뒤에 실행
   }, [roomMessages, currentRoom]);
 
   const currentMessageList = roomMessages[currentRoom] || [];
