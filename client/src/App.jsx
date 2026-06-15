@@ -12,9 +12,7 @@ function App() {
   const [channelList, setChannelList] = useState([]);
   const [newRoomInput, setNewRoomInput] = useState("");
   const [message, setMessage] = useState("");
-
   const [roomMessages, setRoomMessages] = useState({});
-  // 💡 [핵심] 마지막으로 읽은 메시지 개수를 저장하는 상태
   const [lastRead, setLastRead] = useState({});
 
   const handleLogin = () => {
@@ -30,10 +28,7 @@ function App() {
   const handleAddNewRoom = () => {
     const nextRoom = newRoomInput.trim();
     if (nextRoom === "" || channelList.includes(nextRoom)) return;
-    
-    // 💡 참고: 방 이동 시에도 연결을 유지하여 실시간 알림을 받습니다.
     socket.emit("join_room", nextRoom);
-
     setChannelList((prev) => [...prev, nextRoom]);
     setCurrentRoom(nextRoom);
     setNewRoomInput("");
@@ -41,35 +36,25 @@ function App() {
 
   const switchRoom = (targetRoom) => {
     if (targetRoom === currentRoom) return;
-
-    // 💡 [읽음 처리] 방을 클릭하는 순간, 그 방의 현재 메시지 개수를 읽음 상태로 기록
     setLastRead((prev) => ({
       ...prev,
       [targetRoom]: roomMessages[targetRoom]?.length || 0
     }));
-    
     setCurrentRoom(targetRoom);
   };
 
   const handleLeaveRoom = (roomToLeave, e) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     socket.emit("leave_room", roomToLeave);
-
     const updatedChannels = channelList.filter((room) => room !== roomToLeave);
     setChannelList(updatedChannels);
-
     setRoomMessages((prev) => {
       const clone = { ...prev };
       delete clone[roomToLeave];
       return clone;
     });
-
     if (currentRoom === roomToLeave) {
-      if (updatedChannels.length > 0) {
-        setCurrentRoom(updatedChannels[0]);
-      } else {
-        setCurrentRoom("");
-      }
+      setCurrentRoom(updatedChannels.length > 0 ? updatedChannels[0] : "");
     }
   };
 
@@ -118,20 +103,31 @@ function App() {
               <h3>💬 채널 목록</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {channelList.map((roomName) => {
-                  // 💡 [알림 로직] 전체 메시지 - 마지막으로 읽은 메시지 = 안 읽은 메시지
                   const unread = (roomMessages[roomName]?.length || 0) - (lastRead[roomName] || 0);
                   return (
                     <div key={roomName} onClick={() => switchRoom(roomName)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", border: "1px solid #ddd", cursor: "pointer", backgroundColor: currentRoom === roomName ? "#4A90E2" : "#fff", color: currentRoom === roomName ? "#fff" : "#333" }}>
-                      <span style={{ fontWeight: currentRoom === roomName ? "bold" : "normal" }}>
-                        # {roomName} {unread > 0 && `(${unread})`}
-                      </span>
+                      <span style={{ fontWeight: currentRoom === roomName ? "bold" : "normal" }}># {roomName} {unread > 0 && `(${unread})`}</span>
                       <button onClick={(e) => handleLeaveRoom(roomName, e)} style={{ background: "none", border: "none", color: currentRoom === roomName ? "#fff" : "#999", cursor: "pointer" }}>✕</button>
                     </div>
                   );
                 })}
               </div>
             </div>
-            {/* [채팅창 영역 생략 - 동일] */}
+            <div style={{ flex: 1 }}>
+              <h3>📌 현재 채널: {currentRoom}</h3>
+              <div style={{ border: "1px solid #ccc", height: "350px", overflowY: "auto", padding: "15px", backgroundColor: "#f9f9f9", borderRadius: "8px" }}>
+                {currentMessageList.map((msg, index) => (
+                  <div key={index} style={{ textAlign: msg.author === username ? "right" : "left", margin: "10px 0" }}>
+                    <div style={{ fontSize: "12px", color: "#666" }}>{msg.author} ({msg.time})</div>
+                    <span style={{ display: "inline-block", padding: "10px", borderRadius: "10px", backgroundColor: msg.author === username ? "#4A90E2" : "#E5E5EA", color: msg.author === username ? "#fff" : "#000" }}>{msg.message}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                <input type="text" value={message} style={{ flex: 1, padding: "12px" }} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === "Enter" && sendMessage()} />
+                <button onClick={sendMessage} style={{ padding: "0 20px", cursor: "pointer" }}>전송</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
