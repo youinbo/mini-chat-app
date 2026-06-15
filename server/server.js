@@ -10,6 +10,29 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
+// 서버 상단에 메시지를 임시 저장할 객체 추가
+const roomHistory = {}; 
+
+io.on("connection", (socket) => {
+  // ... 기존 join_room 로직 ...
+  socket.on("join_room", (room) => {
+    socket.join(room);
+    // 입장 시, 해당 방의 지난 메시지들을 바로 전송해주기
+    if (roomHistory[room]) {
+      roomHistory[room].forEach(msg => socket.emit("send_message", msg));
+    }
+  });
+
+  socket.on("send_message", (data) => {
+    // 1. 서버 메모리에 메시지 저장
+    if (!roomHistory[data.room]) roomHistory[data.room] = [];
+    roomHistory[data.room].push(data);
+    
+    // 2. 메시지 전송
+    io.to(data.room).emit("send_message", data);
+  });
+});
+
 app.get("/", (req, res) => {
   res.send("<h1>멀티룸 채팅 백엔드 작동 중!</h1>");
 });
