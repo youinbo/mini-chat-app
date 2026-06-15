@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // [수정] useRef 추가
 import { io } from "socket.io-client";
 
 // 서버 주소 연결 (환경 변수 또는 기본 Render 주소)
@@ -15,6 +15,9 @@ function App() {
   const [newRoomInput, setNewRoomInput] = useState(""); // 새 방 입력 필드
   const [message, setMessage] = useState("");         // 입력 중인 메시지
   const [roomMessages, setRoomMessages] = useState({}); // 방별 메시지 데이터 { roomName: [messages] }
+
+  // [추가] 스크롤 위치 추적용 ref
+  const chatEndRef = useRef(null);
 
   // 1. 초기 로그인 및 첫 방 입장
   const handleLogin = () => {
@@ -88,17 +91,6 @@ function App() {
   };
 
   // 6. 서버로부터 실시간 메시지 수신 (데이터 누적)
-                                    //   useEffect(() => {
-                                    //     const handleReceiveMessage = (data) => {
-                                    //       setRoomMessages((prev) => ({
-                                    //         ...prev,
-                                    //         [data.room]: [...(prev[data.room] || []), data]
-                                    //       }));
-                                    //     };
-                                    //     socket.on("send_message", handleReceiveMessage);
-                                    //     return () => socket.off("send_message", handleReceiveMessage);
-                                    //   }, []);
-                                    // // [수정된 useEffect]
   useEffect(() => {
     // 1. 메시지 수신 함수
     const handleReceiveMessage = (data) => {
@@ -117,6 +109,11 @@ function App() {
       socket.off("send_message", handleReceiveMessage);
     };
   }, []); // 빈 배열 유지 (방 전환 시 리렌더링되어도 리스너는 1개만 유지됨)
+
+  // [추가] 채팅 자동 스크롤
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [roomMessages, currentRoom]);
 
   const currentMessageList = roomMessages[currentRoom] || [];
 
@@ -168,6 +165,8 @@ function App() {
                     <span style={{ display: "inline-block", padding: "10px", borderRadius: "10px", backgroundColor: msg.author === username ? "#4A90E2" : "#E5E5EA", color: msg.author === username ? "#fff" : "#000" }}>{msg.message}</span>
                   </div>
                 ))}
+                {/* [추가] 스크롤 위치 지점 */}
+                <div ref={chatEndRef} />
               </div>
               <div style={{ display: "flex", gap: "10px" }}>
                 <input type="text" value={message} style={{ flex: 1, padding: "12px" }} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === "Enter" && sendMessage()} />
